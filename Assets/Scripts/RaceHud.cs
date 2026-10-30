@@ -23,7 +23,8 @@ namespace Temnorid.Hippodrome
 
 		UiBuilder _ui;
 		GameObject _menu, _hud, _pause, _results;
-		Text _records, _lap, _place, _time, _bestLap, _center;
+		Text _records, _lap, _place, _time, _bestLap, _center, _boostState;
+		Image _stamina;
 		Text _resultsTitle, _resultsNames, _resultsTimes, _resultsLaps, _resultsNote;
 		RacePhase _shown = (RacePhase)(-1);
 
@@ -76,6 +77,14 @@ namespace Temnorid.Hippodrome
 			_time.text = FormatTime(Race.RaceTime);
 			_bestLap.text = progress.BestLap > 0f ? $"Best lap {FormatTime(progress.BestLap)}" : "";
 
+			var stamina = Race.Player.Horse.Stamina;
+			UiBuilder.SetFill(_stamina, stamina.Value);
+			_stamina.color = stamina.Exhausted ? new Color(0.85f, 0.25f, 0.2f) : stamina.Value < HorseStamina.TiredBelow ? new Color(0.9f, 0.7f, 0.2f) : new Color(0.35f, 0.8f, 0.4f);
+			if (stamina.Exhausted) { _boostState.text = "EXHAUSTED"; _boostState.color = new Color(0.95f, 0.35f, 0.3f); }
+			else if (stamina.Boosting) { _boostState.text = "BOOST"; _boostState.color = Accent; }
+			else if (stamina.Ready) { _boostState.text = "Shift: boost ready"; _boostState.color = Color.white; }
+			else { _boostState.text = "Shift: resting"; _boostState.color = new Color(1f, 1f, 1f, 0.55f); }
+
 			if (phase == RacePhase.Countdown) _center.text = Mathf.CeilToInt(Race.CountdownRemaining).ToString();
 			else if (phase == RacePhase.Racing && Race.RaceTime < 1f) _center.text = "GO!";
 			else _center.text = "";
@@ -91,9 +100,9 @@ namespace Temnorid.Hippodrome
 			Label(_menu.transform, "Title", "TEMNORID HIPPODROME", 52, TextAnchor.MiddleCenter, new Vector2(0f, 0.78f), new Vector2(1f, 0.98f), Accent);
 			Label(_menu.transform, "Tagline", "Ride. Race. Cross the line first.", 32, TextAnchor.MiddleCenter, new Vector2(0f, 0.68f), new Vector2(1f, 0.78f), Color.white);
 			_records = Label(_menu.transform, "Records", RecordsText(), 30, TextAnchor.MiddleCenter, new Vector2(0.05f, 0.44f), new Vector2(0.95f, 0.66f), Color.white);
-			Button(_menu.transform, "Start Race", new Vector2(0.25f, 0.26f), new Vector2(0.75f, 0.4f), () => Race.StartRace());
-			Button(_menu.transform, "Quit", new Vector2(0.25f, 0.1f), new Vector2(0.75f, 0.22f), () => Race.Quit());
-			Label(_menu.transform, "Hint", "W gallop  ·  S brake  ·  A / D steer  ·  Esc pause", 24, TextAnchor.MiddleCenter, new Vector2(0f, 0f), new Vector2(1f, 0.09f), new Color(1f, 1f, 1f, 0.7f));
+			Button(_menu.transform, "Start Race", new Vector2(0.25f, 0.28f), new Vector2(0.75f, 0.42f), () => Race.StartRace());
+			Button(_menu.transform, "Quit", new Vector2(0.25f, 0.13f), new Vector2(0.75f, 0.24f), () => Race.Quit());
+			Label(_menu.transform, "Hint", "W gallop  ·  S brake  ·  A / D steer\nShift boost  ·  Space jump  ·  Esc pause", 24, TextAnchor.MiddleCenter, new Vector2(0f, 0f), new Vector2(1f, 0.1f), new Color(1f, 1f, 1f, 0.7f));
 		}
 
 		void BuildHud(Transform parent)
@@ -106,6 +115,10 @@ namespace Temnorid.Hippodrome
 			_place = Label(_hud.transform, "Place", "", 44, TextAnchor.UpperRight, new Vector2(0.65f, 0.9f), new Vector2(0.98f, 0.99f), Accent);
 			_time = Label(_hud.transform, "Time", "", 44, TextAnchor.UpperCenter, new Vector2(0.38f, 0.9f), new Vector2(0.62f, 0.99f), Color.white);
 			_center = Label(_hud.transform, "Center", "", 160, TextAnchor.MiddleCenter, new Vector2(0.3f, 0.4f), new Vector2(0.7f, 0.75f), Accent);
+
+			Label(_hud.transform, "StaminaLabel", "STAMINA", 24, TextAnchor.LowerLeft, new Vector2(0.02f, 0.075f), new Vector2(0.14f, 0.105f), new Color(1f, 1f, 1f, 0.8f));
+			_stamina = UiBuilder.Bar("Stamina", _hud.transform, new Vector2(0.02f, 0.05f), new Vector2(0.24f, 0.07f), new Color(0.35f, 0.8f, 0.4f));
+			_boostState = Label(_hud.transform, "BoostState", "", 26, TextAnchor.UpperLeft, new Vector2(0.02f, 0.012f), new Vector2(0.3f, 0.048f), Color.white);
 		}
 
 		void BuildPause(Transform parent)

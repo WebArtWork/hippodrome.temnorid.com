@@ -32,6 +32,10 @@ namespace Temnorid.Hippodrome
 		public int Laps = 3;
 		public float CountdownSeconds = 3f;
 
+		[Header("Pacing")]
+		[Tooltip("Computer riders quietly ease or push a few per cent so the race stays close. Only for races against computer riders: a race against other people must turn this off.")]
+		public bool PacingAssist = true;
+
 		[Header("Testing")]
 		[Tooltip("The player's horse rides itself, like a bot. Used by automated tests.")]
 		public bool PlayerAutopilot;
@@ -45,6 +49,13 @@ namespace Temnorid.Hippodrome
 		float _timeScaleBeforePause = 1f;
 		RecordsStore _store;
 
+		// Distance along the track, kept for every racer so the race can tell who really leads.
+		float[] _cumulative;
+		float _perimeter;
+		int[] _segment;
+		int[] _laps;
+		float[] _distance;
+
 		public RacePhase Phase => _phase;
 		public float CountdownRemaining => _countdown;
 		public float RaceTime { get; private set; }
@@ -56,6 +67,9 @@ namespace Temnorid.Hippodrome
 		public HippodromeRecords Records { get; private set; } = new HippodromeRecords();
 		public bool NewBestLap { get; private set; }
 		public bool NewBestTotal { get; private set; }
+
+		/// <summary>Metres ridden along the track by a racer, counting laps. Index 0 is the player.</summary>
+		public float DistanceOf(int racer) => _distance != null && racer < _distance.Length ? _distance[racer] : 0f;
 
 		public Racer Player => Racers != null && Racers.Length > 0 ? Racers[0] : null;
 
@@ -96,7 +110,15 @@ namespace Temnorid.Hippodrome
 				}
 			}
 
+			BuildPathLengths();
 			PrepareGrid();
+		}
+
+		void FixedUpdate()
+		{
+			if (_phase != RacePhase.Racing && _phase != RacePhase.Finished) return;
+			UpdateProgress();
+			if (_phase == RacePhase.Racing) ApplyPacing(Time.fixedDeltaTime);
 		}
 
 		void Update()
@@ -191,11 +213,13 @@ namespace Temnorid.Hippodrome
 				var racer = Racers[i];
 				var slot = GridSlots[i % GridSlots.Length];
 				racer.Horse.Locked = true;
+				racer.Horse.ResetRace();
 				racer.Horse.Teleport(slot.position, slot.rotation);
 				racer.Horse.Driver = DriverFor(racer);
 				if (racer.BotDriver != null) racer.BotDriver.enabled = racer.Horse.Driver == racer.BotDriver;
 				if (racer.PlayerDriver != null) racer.PlayerDriver.enabled = racer.Horse.Driver == racer.PlayerDriver;
 			}
+			StartProgress();
 			UpdateOrder();
 		}
 
@@ -214,6 +238,118 @@ namespace Temnorid.Hippodrome
 			{
 				racer.Horse.Locked = false;
 				if (racer.BotDriver != null && racer.BotDriver.enabled) racer.BotDriver.SetPath(Waypoints);
+			}
+		}
+
+		// ---- progress and pacing ----
+
+		void BuildPathLengths()
+		{
+			var n = Waypoints.Length;
+			_cumulative = new float[n + 1];
+			for (var i = 0; i < n; i++)
+			{
+				var a = Waypoints[i].position;
+				var b = Waypoints[(i + 1) % n].position;
+				_cumulative[i + 1] = _cumulative[i] + Flat(b - a).magnitude;
+			}
+			_perimeter = _cumulative[n];
+			_segment = new int[Racers.Length];
+			_laps = new int[Racers.Length];
+			_distance = new float[Racers.Length];
+		}
+
+		static Vector3 Flat(Vector3 v)
+		{
+			v.y = 0f;
+			return v;
+		}
+
+		void StartProgress()
+		{
+			if (_cumulative == null) return;
+			for (var i = 0; i < Racers.Length; i++)
+			{
+				_segment[i] = NearestSegment(Racers[i].transform.position, -1, out var along);
+				_laps[i] = 0;
+				_distance[i] = along;
+			}
+		}
+
+		void UpdateProgress()
+		{
+			if (_cumulative == null) return;
+			var n = Waypoints.Length;
+			for (var i = 0; i < Racers.Length; i++)
+			{
+				var previous = _segment[i];
+				var segment = NearestSegment(Racers[i].transform.position, previous, out var along);
+
+				// Crossing the line where the path starts over adds or removes a lap.
+				if (segment < previous - n / 2) _laps[i]++;
+				else if (segment > previous + n / 2) _laps[i]--;
+
+				_segment[i] = segment;
+				_distance[i] = _laps[i] * _perimeter + along;
+			}
+		}
+
+		// The segment of the path closest to a position. With a previous segment, only the ones near it are looked at.
+		int NearestSegment(Vector3 position, int near, out float along)
+		{
+			var n = Waypoints.Length;
+			var best = 0;
+			var bestDistance = float.MaxValue;
+			var bestAlong = 0f;
+			var from = near < 0 ? 0 : -3;
+			var to = near < 0 ? n - 1 : 6;
+
+			for (var k = from; k <= to; k++)
+			{
+				var i = near < 0 ? k : ((near + k) % n + n) % n;
+				var a = Waypoints[i].position;
+				var b = Waypoints[(i + 1) % n].position;
+				var ab = Flat(b - a);
+				var length = ab.magnitude;
+				var t = length > 0.001f ? Mathf.Clamp01(Vector3.Dot(Flat(position - a), ab) / (length * length)) : 0f;
+				var closest = a + ab * t;
+				var distance = Flat(position - closest).sqrMagnitude;
+				if (distance < bestDistance)
+				{
+					bestDistance = distance;
+					best = i;
+					bestAlong = _cumulative[i] + t * length;
+				}
+			}
+			along = bestAlong;
+			return best;
+		}
+
+		/// <summary>
+		/// Keeps the race close for a single player: while the player leads the computer riders find a little more
+		/// speed, and while the player trails the rider in front eases a little. A few per cent, changing slowly.
+		/// </summary>
+		void ApplyPacing(float dt)
+		{
+			if (_distance == null || Racers.Length < 2) return;
+
+			var leader = -1;
+			var leaderDistance = float.MinValue;
+			for (var i = 1; i < Racers.Length; i++)
+			{
+				if (_distance[i] > leaderDistance)
+				{
+					leaderDistance = _distance[i];
+					leader = i;
+				}
+			}
+			var playerLeads = _distance[0] >= leaderDistance;
+
+			for (var i = 1; i < Racers.Length; i++)
+			{
+				var horse = Racers[i].Horse;
+				var target = PacingAssist ? RacePacing.Target(playerLeads, _distance[0] - _distance[i], i == leader) : 1f;
+				horse.SpeedScale = RacePacing.Step(horse.SpeedScale, target, dt);
 			}
 		}
 

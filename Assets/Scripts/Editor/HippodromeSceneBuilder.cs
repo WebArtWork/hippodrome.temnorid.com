@@ -39,6 +39,7 @@ namespace Temnorid.Hippodrome.EditorTools
 			var slide = SlideMaterial();
 
 			BuildEnvironment(points, slide);
+			BuildNarrowPasses(points, slide);
 			var waypoints = BuildWaypoints(points);
 			var checkpoints = BuildCheckpoints(points);
 			var slots = BuildGrid(points);
@@ -65,7 +66,7 @@ namespace Temnorid.Hippodrome.EditorTools
 		{
 			PlayerSettings.productName = "Temnorid Hippodrome";
 			PlayerSettings.companyName = "Temnorid";
-			PlayerSettings.bundleVersion = "0.1.0";
+			PlayerSettings.bundleVersion = "0.2.0";
 			PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Standalone, "com.itkamianets.hippodrome");
 			PlayerSettings.runInBackground = true;
 			PlayerSettings.fullScreenMode = FullScreenMode.FullScreenWindow;
@@ -142,7 +143,11 @@ namespace Temnorid.Hippodrome.EditorTools
 					var pb = b + Right(p, j) * offset;
 					var rail = Prim(PrimitiveType.Cube, "Rail_" + i + (side < 0 ? "_in" : "_out"), railRoot, (pa + pb) * 0.5f + Vector3.up * 0.55f, new Vector3(0.5f, 1.1f, (pb - pa).magnitude + 0.25f), (i / 2) % 2 == 0 ? rail1 : rail2, true);
 					rail.transform.rotation = Quaternion.LookRotation(pb - pa);
-					rail.GetComponent<BoxCollider>().sharedMaterial = slide;
+					// The rail is 1.1 m tall to look at but its collider reaches 4 m, so a jumping horse cannot hop out of the track.
+					var railCollider = rail.GetComponent<BoxCollider>();
+					railCollider.sharedMaterial = slide;
+					railCollider.size = new Vector3(1f, 4f / 1.1f, 1f);
+					railCollider.center = new Vector3(0f, (2f - 0.55f) / 1.1f, 0f);
 				}
 			}
 
@@ -161,6 +166,63 @@ namespace Temnorid.Hippodrome.EditorTools
 					Prim(PrimitiveType.Cube, "Check", line, new Vector3(x, 0f, (row - 0.5f) * 0.6f), new Vector3(1f, 0.02f, 0.6f), (col + row) % 2 == 0 ? white : black);
 				}
 			}
+		}
+
+		// ---- narrow passes with a bar to jump ----
+
+		const float PassGapHalf = 4f;
+
+		/// <summary>Two places where blocks narrow the track to a gap, with a bar across it. Riders jump the bar.</summary>
+		static void BuildNarrowPasses(Vector3[] p, PhysicsMaterial slide)
+		{
+			var root = new GameObject("NarrowPasses").transform;
+			var hay = Mat("HayBale", new Color(0.82f, 0.68f, 0.30f));
+			var wood = Mat("HurdleWood", new Color(0.50f, 0.32f, 0.18f));
+			var stripe = Mat("HurdleStripe", new Color(0.92f, 0.92f, 0.9f));
+
+			BuildNarrowPass(root, p, 36, "A", hay, wood, stripe, slide);
+			BuildNarrowPass(root, p, 69, "B", hay, wood, stripe, slide);
+		}
+
+		static void BuildNarrowPass(Transform parent, Vector3[] p, int index, string name, Material block, Material wood, Material stripe, PhysicsMaterial slide)
+		{
+			var pass = new GameObject("Pass_" + name);
+			pass.transform.SetParent(parent, false);
+			pass.transform.SetPositionAndRotation(p[index], Quaternion.LookRotation(Tangent(p, index)));
+			pass.AddComponent<AssetIdTag>().Id = "track/narrow-pass";
+
+			var half = TrackWidth * 0.5f + 0.45f;
+			foreach (var side in new[] { -1f, 1f })
+			{
+				// A long block either side of the gap, and a shorter, thinner one before and after it so the track narrows gently.
+				AddBlock(pass.transform, "Block", new Vector3(side * (PassGapHalf + (half - PassGapHalf) * 0.5f), 1f, 0f), new Vector3(half - PassGapHalf, 2f, 8f), block, slide);
+				foreach (var end in new[] { -1f, 1f })
+				{
+					var inner = PassGapHalf + 1.5f;
+					AddBlock(pass.transform, "Taper", new Vector3(side * (inner + (half - inner) * 0.5f), 1f, end * 5.5f), new Vector3(half - inner, 2f, 3f), block, slide);
+				}
+			}
+
+			// The hurdle: two posts and two bars across the gap. Only the top bar matters, and it falls when hit.
+			var hurdle = new GameObject("Hurdle");
+			hurdle.transform.SetParent(pass.transform, false);
+			hurdle.AddComponent<AssetIdTag>().Id = "track/hurdle";
+			var component = hurdle.AddComponent<Hurdle>();
+			component.GapHalfWidth = PassGapHalf;
+			component.ZoneHalfLength = 8f;
+			component.ClearHeight = 0.9f;
+
+			foreach (var x in new[] { -PassGapHalf + 0.1f, PassGapHalf - 0.1f })
+				Prim(PrimitiveType.Cylinder, "Post", hurdle.transform, new Vector3(x, 0.55f, 0f), new Vector3(0.2f, 0.55f, 0.2f), wood);
+			Prim(PrimitiveType.Cube, "LowBar", hurdle.transform, new Vector3(0f, 0.4f, 0f), new Vector3(PassGapHalf * 2f - 0.2f, 0.14f, 0.14f), wood);
+			var top = Prim(PrimitiveType.Cube, "TopBar", hurdle.transform, new Vector3(0f, 0.85f, 0f), new Vector3(PassGapHalf * 2f - 0.2f, 0.16f, 0.16f), stripe);
+			component.Bar = top.transform;
+		}
+
+		static void AddBlock(Transform parent, string name, Vector3 position, Vector3 size, Material material, PhysicsMaterial slide)
+		{
+			var block = Prim(PrimitiveType.Cube, name, parent, position, size, material, true);
+			block.GetComponent<BoxCollider>().sharedMaterial = slide;
 		}
 
 		static Transform[] BuildWaypoints(Vector3[] p)
@@ -270,6 +332,7 @@ namespace Temnorid.Hippodrome.EditorTools
 			var bot = root.AddComponent<BotDriver>();
 			bot.LaneOffset = lane;
 			bot.Skill = skill;
+			bot.JumpTimingError = player ? 1f : Mathf.Lerp(0.8f, 4.2f, Mathf.InverseLerp(0.97f, 0.91f, skill));
 			bot.enabled = !player;
 
 			var visual = new GameObject("Visual").transform;

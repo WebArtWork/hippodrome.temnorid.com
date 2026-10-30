@@ -4,7 +4,7 @@
 
 Breeding, training and racing horses. A [Temnorid](https://temnorid.com) game for **Windows**, built on the [IT Kamianets 3D Engine](https://3d.itkamianets.com) with Unity 6000.6.
 
-**Status:** in development, first playable not released yet. Website: https://hippodrome.temnorid.com · Download: [Temnorid-Hippodrome-Setup.exe](https://github.com/WebArtWork/hippodrome.temnorid.com/releases/latest/download/Temnorid-Hippodrome-Setup.exe)
+**Status:** version 0.2.0, playable. Website: https://hippodrome.temnorid.com · Download: [Temnorid-Hippodrome-Setup.exe](https://github.com/WebArtWork/hippodrome.temnorid.com/releases/latest/download/Temnorid-Hippodrome-Setup.exe)
 
 ## What it is
 
@@ -19,8 +19,9 @@ The first playable is the race itself: you on a horse against computer riders, t
 ### How a session goes
 
 1. Press Start Race. A countdown runs, then the race begins.
-2. Accelerate, brake and steer your horse around the track. The camera follows behind.
+2. Accelerate, brake and steer your horse around the track. The camera follows behind. Keep clear of the other riders and the rails: both slow you down.
 3. Pass every checkpoint in order; a lap only counts if you did. Cutting across the field does not.
+   Twice a lap the track narrows between hay bales, with a bar across the gap: jump it with Space.
 4. Watch your lap, your time and your position among the riders.
 5. After the last lap you see the final order and your time. Restart to race again.
 
@@ -31,7 +32,16 @@ The first playable is the race itself: you on a horse against computer riders, t
 | W | Gallop faster |
 | S | Slow down |
 | A / D | Steer left / right |
+| Shift | Burst of speed (needs a short rest between uses) |
+| Space | Jump |
 | Esc | Pause menu |
+
+### Riding
+
+- **Other riders:** horses do not pass through each other. Coming up close behind another horse makes yours ease off, and horses side by side slow down a little and are pushed apart, so you have to steer round.
+- **Walls:** touching a rail or a hay bale takes speed away; scraping along it keeps taking it.
+- **Boost (Shift):** a burst of speed for about a second. A rested horse can do it again after about three and a half seconds. Pressing it sooner gives no speed and still tires the horse, and a horse that is worn out slows down and ignores the key until it has caught its breath. The bar at the bottom left shows the horse's stamina.
+- **Jump (Space):** the horse leaves the ground for about three quarters of a second. Be in the air when the front of the horse reaches the bar; hit it and the horse stumbles and loses most of its speed. A jump costs a little stamina.
 
 ### Win and lose
 
@@ -40,7 +50,7 @@ The first playable is the race itself: you on a horse against computer riders, t
 
 ### The scene
 
-One closed racecourse with a start and finish line, checkpoints, barriers and four horse-and-rider shapes in different colours.
+One closed racecourse with a start and finish line, checkpoints, rails, two narrow passes between hay bales with a bar to jump, and four horse-and-rider shapes in different colours.
 
 ## How it connects to Lords
 
@@ -50,7 +60,7 @@ This is for a later phase: [Lords](https://lords.temnorid.com) is the central st
 
 ## Scope of this version
 
-- Riding, computer riders, checkpoints, laps, positions, results, best times saved.
+- Riding, boost and stamina, jumping, crowding and walls, computer riders, checkpoints, laps, positions, results, best times saved.
 - No breeding, training, feeding, betting or owned horses yet.
 
 Everything is drawn with Unity primitives (blocks, capsules, spheres), simple colours and text. No models, no paid assets. Every visible object has a stable asset id (for example `resources/wood-node`) so real models can replace the placeholders without touching gameplay.
@@ -65,14 +75,16 @@ Everything is drawn with Unity primitives (blocks, capsules, spheres), simple co
   - `3d-*` packages: generic, engine-level behaviour with no Temnorid content (combat, AI, inventory, save, ...).
   - `temnorid-*` packages: Temnorid content shared by **several games** (for example `temnorid-character`). Never `temnorid-<game>-*`.
   - `Assets/Scripts` in this project: this game's own rules, scene builders, HUD and menus.
-- **Packages while developing:** the packages sit in the shared workspace folder next to the games (`../3d-unity-core`, `../3d-unity-input`, `../3d-unity-save`) and `Packages/manifest.json` points at them with `file:../../<package>`. When they get their own repositories, only these paths change.
-- **Level building:** menu **Temnorid > Hippodrome > Build Scene** (or `-executeMethod Temnorid.Hippodrome.EditorTools.HippodromeSceneBuilder.Build` from the command line) rebuilds `Assets/Scenes/Main.unity` from scratch: the track, rails, checkpoints, four horses, camera and light, all from primitives. It can be run again at any time; do not edit the scene by hand.
+- **Packages:** `Packages/manifest.json` points at the engine packages by their GitHub URLs (`https://github.com/IT-Kamianets/<package>.git`); Unity downloads them on first open.
+- **Level building:** menu **Temnorid > Hippodrome > Build Scene** (or `-executeMethod Temnorid.Hippodrome.EditorTools.HippodromeSceneBuilder.Build` from the command line) rebuilds `Assets/Scenes/Main.unity` from scratch: the track, rails, the two narrow passes with their hurdles, checkpoints, four horses, camera and light, all from primitives. It can be run again at any time; do not edit the scene by hand.
 - **Code map (`Assets/Scripts`):**
   - `RaceRules`: the laps, checkpoints and ranking rules, with no Unity in them.
   - `RaceController`: the race itself (grid, countdown, pause, finish, records).
-  - `HorseController` with a `HorseDriver`: `PlayerDriver` (keyboard or stick) or `BotDriver` (follows waypoints).
+  - `HorseController` with a `HorseDriver`: `PlayerDriver` (keyboard or stick, with Shift and Space kept until the physics step uses them) or `BotDriver` (follows waypoints, boosts now and then, jumps the hurdles with a little timing error, keeps to the gap in the narrow passes).
+  - `HorseStamina` (boost, cooldown, strain, exhaustion) and `HorsePhysics` (crowding, following, wall hits): no Unity in them, so they are unit tested. `Hurdle`: the bar across a narrow pass; it checks the front of each horse crossing and never blocks the way.
+  - `RacePacing` with `RaceController.PacingAssist`: for races against computer riders only, the others find a few per cent more speed while the player leads and the leader eases a little while the player trails, changing slowly so it is not noticed. **It must be switched off (`PacingAssist = false`) for any race against other people.**
   - `Checkpoint`, `Racer`, `RaceCamera`, `RaceHud` (all screens, plain uGUI), `HippodromeRecords` (what is saved), `AssetIdTag` (stable ids like `horses/basic` for future models).
-- **Tests:** `Assets/Tests/EditMode` covers the race rules and the records file; `Assets/Tests/PlayMode` rides a full race with every horse on autopilot. Run them from Window > General > Test Runner, or with `Unity.exe -batchmode -runTests -testPlatform EditMode` (or `PlayMode`).
+- **Tests:** `Assets/Tests/EditMode` covers the race rules, the records file, stamina, crowding and pacing; `Assets/Tests/PlayMode` rides a full race with every horse on autopilot and checks on the real track that horses cannot ride through each other, walls and bars slow them, a jump clears a bar and a boost is faster. Run them from Window > General > Test Runner, or with `Unity.exe -batchmode -runTests -testPlatform EditMode` (or `PlayMode`).
 - **Save file:** `<persistent data path>/hippodrome/default.json` (on Windows `%USERPROFILE%\AppData\LocalLow\Temnorid\Temnorid Hippodrome\hippodrome\default.json`).
 - **Do not add:** networking, Firebase, accounts, or any link to Lords in this version.
 
@@ -84,11 +96,11 @@ The download button points to the latest GitHub Release asset:
 
 `https://github.com/WebArtWork/hippodrome.temnorid.com/releases/latest/download/Temnorid-Hippodrome-Setup.exe`
 
-Release steps (when the first playable is ready):
+Release steps:
 
 1. Build the Windows player from Unity (File > Build Profiles > Windows).
 2. Wrap the build in a Windows installer named `Temnorid-Hippodrome-Setup.exe`.
-3. Create a GitHub Release (tag `v0.1.0`) and attach that file.
+3. Create a GitHub Release (tag `v<version>`, for example `v0.2.0`) and attach that file and the zip.
 4. Open the website, click the button, install, play, save, restart, uninstall.
 
 When you change the game's description, controls or rules, update this README and `docs/index.html` together.

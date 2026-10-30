@@ -14,10 +14,16 @@ namespace Temnorid.Hippodrome
 		public float Skill = 0.95f;
 		/// <summary>How far ahead the rider aims, in metres.</summary>
 		public float Lookahead = 12f;
+		/// <summary>How far off, in metres, this rider may misjudge where to take off for a jump. A weak rider sometimes hits the bar.</summary>
+		public float JumpTimingError;
 
 		Transform[] _waypoints;
 		int _target;
 		float _stuckTime;
+		float _steer;
+		float _nextBoost;
+		float _lastJump = -10f;
+		float _jumpError;
 		HorseController _horse;
 
 		public void SetPath(Transform[] waypoints)
@@ -35,6 +41,7 @@ namespace Temnorid.Hippodrome
 		{
 			if (_waypoints != null) _target = NearestAhead();
 			_stuckTime = 0f;
+			_nextBoost = Time.time + Random.Range(5f, 9f);
 		}
 
 		public override Vector2 Drive()
@@ -54,6 +61,7 @@ namespace Temnorid.Hippodrome
 			var angle = Vector3.SignedAngle(transform.forward, toTarget.normalized, Vector3.up);
 			var steer = Mathf.Clamp(angle / 30f, -1f, 1f);
 			var throttle = Skill * (1f - 0.5f * Mathf.Abs(steer));
+			_steer = steer;
 
 			if (_horse != null && !_horse.Locked && _horse.Speed < 1.5f) _stuckTime += Time.fixedDeltaTime;
 			else _stuckTime = 0f;
@@ -62,13 +70,57 @@ namespace Temnorid.Hippodrome
 			return new Vector2(steer, throttle);
 		}
 
+		/// <summary>A rested rider in a straight line asks for a burst now and then.</summary>
+		public override bool ConsumeBoost()
+		{
+			if (_horse == null || Time.time < _nextBoost) return false;
+			if (!_horse.Stamina.Ready || _horse.Stamina.Value < 0.6f || Mathf.Abs(_steer) > 0.25f) return false;
+			_nextBoost = Time.time + Random.Range(5f, 9f);
+			return true;
+		}
+
+		/// <summary>Takes off so that the front of the horse is high over the bar when it gets there.</summary>
+		public override bool ConsumeJump()
+		{
+			if (_horse == null || _horse.Airborne || _horse.Speed < _horse.MinJumpSpeed || Time.time - _lastJump < 1.2f) return false;
+
+			foreach (var hurdle in Hurdle.All)
+			{
+				if (!hurdle.Faces(_horse)) continue;
+				var distance = hurdle.DistanceAhead(_horse);
+				if (distance <= 0f) continue;
+
+				// The jump peaks about 0.37 s after take-off.
+				if (distance <= _horse.Speed * 0.37f + _jumpError)
+				{
+					_lastJump = Time.time;
+					_jumpError = Random.Range(-JumpTimingError, JumpTimingError);
+					return true;
+				}
+			}
+			return false;
+		}
+
 		Vector3 TargetPoint(int index)
 		{
 			var count = _waypoints.Length;
 			var tangent = _waypoints[(index + 1) % count].position - _waypoints[(index - 1 + count) % count].position;
 			tangent.y = 0f;
 			var right = Vector3.Cross(Vector3.up, tangent.normalized);
-			return _waypoints[index].position + right * LaneOffset;
+			var point = _waypoints[index].position + right * LaneOffset;
+
+			// Where the track is narrowed to a gap, keep to the middle of it.
+			foreach (var hurdle in Hurdle.All)
+			{
+				var local = hurdle.transform.InverseTransformPoint(point);
+				// Only the stretch of track the hurdle is on: not a point further along, nor on the far side of the infield.
+				if (Mathf.Abs(local.z) > hurdle.ZoneHalfLength + Lookahead || Mathf.Abs(local.x) > hurdle.GapHalfWidth + 6f) continue;
+				var limit = hurdle.GapHalfWidth - 1.6f;
+				if (Mathf.Abs(local.x) <= limit) continue;
+				local.x = Mathf.Clamp(local.x, -limit, limit);
+				point = hurdle.transform.TransformPoint(local);
+			}
+			return point;
 		}
 
 		int NearestAhead()
