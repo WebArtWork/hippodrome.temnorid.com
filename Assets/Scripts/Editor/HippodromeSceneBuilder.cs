@@ -66,7 +66,7 @@ namespace Temnorid.Hippodrome.EditorTools
 		{
 			PlayerSettings.productName = "Temnorid Hippodrome";
 			PlayerSettings.companyName = "Temnorid";
-			PlayerSettings.bundleVersion = "0.2.0";
+			PlayerSettings.bundleVersion = "0.3.0";
 			PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Standalone, "com.itkamianets.hippodrome");
 			PlayerSettings.runInBackground = true;
 			PlayerSettings.fullScreenMode = FullScreenMode.FullScreenWindow;
@@ -299,14 +299,14 @@ namespace Temnorid.Hippodrome.EditorTools
 			var root = new GameObject("Racers").transform;
 			return new[]
 			{
-				Horse(root, slots[0], "You", new Color(0.45f, 0.30f, 0.18f), new Color(0.18f, 0.45f, 0.95f), true, 1f, 3f, slide),
-				Horse(root, slots[1], "Ember", new Color(0.62f, 0.34f, 0.16f), new Color(0.85f, 0.2f, 0.2f), false, 0.97f, -3.5f, slide),
-				Horse(root, slots[2], "Willow", new Color(0.25f, 0.20f, 0.17f), new Color(0.25f, 0.7f, 0.3f), false, 0.94f, 3.5f, slide),
-				Horse(root, slots[3], "Storm", new Color(0.72f, 0.68f, 0.6f), new Color(0.95f, 0.8f, 0.2f), false, 0.91f, 0f, slide),
+				Horse(root, slots[0], "You", new Color(0.45f, 0.30f, 0.18f), new Color(0.18f, 0.45f, 0.95f), true, 1f, 3f, 1f, slide),
+				Horse(root, slots[1], "Ember", new Color(0.62f, 0.34f, 0.16f), new Color(0.85f, 0.2f, 0.2f), false, 0.975f, -2.5f, 1f, slide),
+				Horse(root, slots[2], "Willow", new Color(0.25f, 0.20f, 0.17f), new Color(0.25f, 0.7f, 0.3f), false, 1f, 2.5f, 4.8f, slide),
+				Horse(root, slots[3], "Storm", new Color(0.72f, 0.68f, 0.6f), new Color(0.95f, 0.8f, 0.2f), false, 0.99f, 0f, 3.6f, slide),
 			};
 		}
 
-		static Racer Horse(Transform parent, Transform slot, string name, Color coat, Color rider, bool player, float skill, float lane, PhysicsMaterial slide)
+		static Racer Horse(Transform parent, Transform slot, string name, Color coat, Color rider, bool player, float skill, float lane, float jumpError, PhysicsMaterial slide)
 		{
 			var root = new GameObject("Horse_" + name);
 			root.transform.SetParent(parent, false);
@@ -332,7 +332,8 @@ namespace Temnorid.Hippodrome.EditorTools
 			var bot = root.AddComponent<BotDriver>();
 			bot.LaneOffset = lane;
 			bot.Skill = skill;
-			bot.JumpTimingError = player ? 1f : Mathf.Lerp(0.8f, 4.2f, Mathf.InverseLerp(0.97f, 0.91f, skill));
+			// A rider's take-off can be this many metres early or late. The bar is cleared within about 3.4 m of the best spot, so a larger error means now and then a stumble.
+			bot.JumpTimingError = jumpError;
 			bot.enabled = !player;
 
 			var visual = new GameObject("Visual").transform;

@@ -326,29 +326,17 @@ namespace Temnorid.Hippodrome
 		}
 
 		/// <summary>
-		/// Keeps the race close for a single player: while the player leads the computer riders find a little more
-		/// speed, and while the player trails the rider in front eases a little. A few per cent, changing slowly.
+		/// Keeps the race close for a single player: riders behind the player chase up to a short distance behind it,
+		/// riders ahead of the player ease in proportion to their lead. A few per cent, changing slowly.
 		/// </summary>
 		void ApplyPacing(float dt)
 		{
 			if (_distance == null || Racers.Length < 2) return;
 
-			var leader = -1;
-			var leaderDistance = float.MinValue;
-			for (var i = 1; i < Racers.Length; i++)
-			{
-				if (_distance[i] > leaderDistance)
-				{
-					leaderDistance = _distance[i];
-					leader = i;
-				}
-			}
-			var playerLeads = _distance[0] >= leaderDistance;
-
 			for (var i = 1; i < Racers.Length; i++)
 			{
 				var horse = Racers[i].Horse;
-				var target = PacingAssist ? RacePacing.Target(playerLeads, _distance[0] - _distance[i], i == leader) : 1f;
+				var target = PacingAssist ? RacePacing.Target(_distance[0] - _distance[i]) : 1f;
 				horse.SpeedScale = RacePacing.Step(horse.SpeedScale, target, dt);
 			}
 		}

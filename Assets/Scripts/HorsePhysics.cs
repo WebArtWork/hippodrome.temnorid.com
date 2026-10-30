@@ -99,30 +99,35 @@ namespace Temnorid.Hippodrome
 	}
 
 	/// <summary>
-	/// The quiet help that makes a race with computer riders close: while the player leads, the others
-	/// find a little more speed, and while the player trails, the leader eases a little. It only changes
-	/// pace by a few per cent and only slowly, so it is not noticed. It is for races against computer
-	/// riders only; a race against other people must not use it.
+	/// The quiet help that keeps a race against computer riders close and lets skill decide it. A rider behind
+	/// the player chases, but only up to a short distance behind, so it stays on the player's tail and passes
+	/// only if the player slips. A rider ahead of the player eases in proportion to how far ahead it is, so a
+	/// player who rides well from behind can win. Pace changes by a few per cent and only gradually, so it is
+	/// not noticed. It is for races against computer riders only; a race against other people must not use it.
 	/// </summary>
 	public static class RacePacing
 	{
-		/// <summary>The most the pace is changed, as a share of normal.</summary>
-		public const float MaxChange = 0.06f;
-		/// <summary>The gap, in metres, at which the full change applies.</summary>
-		public const float FullGap = 45f;
+		/// <summary>The most speed a computer rider adds while chasing the player, as a share of normal.</summary>
+		public const float MaxChase = 0.12f;
+		/// <summary>The most speed a computer rider gives up while ahead of the player.</summary>
+		public const float MaxEase = 0.18f;
+		/// <summary>A rider this close behind the player (metres) has no reason to push harder.</summary>
+		public const float HoverGap = 6f;
+		/// <summary>How much further back than the hover gap (metres) the full chase applies.</summary>
+		public const float ChaseGap = 25f;
+		/// <summary>How far ahead of the player (metres) the full easing applies.</summary>
+		public const float EaseGap = 22f;
 		/// <summary>How fast the pace may move, per second, so it is never a sudden jolt.</summary>
-		public const float Rate = 0.025f;
+		public const float Rate = 0.05f;
 
 		/// <summary>
-		/// The pace a computer rider should aim for. <paramref name="playerLeads"/> says whether the
-		/// player is ahead of every computer rider; <paramref name="gapToPlayer"/> is the distance
-		/// between this rider and the player (positive when the player is ahead of this rider, negative
-		/// when behind); <paramref name="isLeader"/> is true for the computer rider in front.
+		/// The pace a computer rider should aim for, as a share of normal. <paramref name="playerAhead"/> is how far
+		/// the player is in front of this rider in metres (negative when this rider is the one in front).
 		/// </summary>
-		public static float Target(bool playerLeads, float gapToPlayer, bool isLeader)
+		public static float Target(float playerAhead)
 		{
-			if (playerLeads) return 1f + MaxChange * Clamp01(gapToPlayer / FullGap);
-			if (isLeader) return 1f - MaxChange * Clamp01(-gapToPlayer / FullGap);
+			if (playerAhead > HoverGap) return 1f + MaxChase * Clamp01((playerAhead - HoverGap) / ChaseGap);
+			if (playerAhead < 0f) return 1f - MaxEase * Clamp01(-playerAhead / EaseGap);
 			return 1f;
 		}
 

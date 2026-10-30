@@ -4,7 +4,7 @@
 
 Breeding, training and racing horses. A [Temnorid](https://temnorid.com) game for **Windows**, built on the [IT Kamianets 3D Engine](https://3d.itkamianets.com) with Unity 6000.6.
 
-**Status:** version 0.2.0, playable. Website: https://hippodrome.temnorid.com · Download: [Temnorid-Hippodrome-Setup.exe](https://github.com/WebArtWork/hippodrome.temnorid.com/releases/latest/download/Temnorid-Hippodrome-Setup.exe)
+**Status:** version 0.3.0, playable. Website: https://hippodrome.temnorid.com · Download: [Temnorid-Hippodrome-Setup.exe](https://github.com/WebArtWork/hippodrome.temnorid.com/releases/latest/download/Temnorid-Hippodrome-Setup.exe)
 
 ## What it is
 
@@ -38,6 +38,7 @@ The first playable is the race itself: you on a horse against computer riders, t
 
 ### Riding
 
+- **Computer riders:** they race to win. They go round slower horses, use their own bursts of speed, stay on your tail when you lead and chase you down if you slip, but they make mistakes too: one now and then mistimes a jump.
 - **Other riders:** horses do not pass through each other. Coming up close behind another horse makes yours ease off, and horses side by side slow down a little and are pushed apart, so you have to steer round.
 - **Walls:** touching a rail or a hay bale takes speed away; scraping along it keeps taking it.
 - **Boost (Shift):** a burst of speed for about a second. A rested horse can do it again after about three and a half seconds. Pressing it sooner gives no speed and still tires the horse, and a horse that is worn out slows down and ignores the key until it has caught its breath. The bar at the bottom left shows the horse's stamina.
@@ -82,9 +83,10 @@ Everything is drawn with Unity primitives (blocks, capsules, spheres), simple co
   - `RaceController`: the race itself (grid, countdown, pause, finish, records).
   - `HorseController` with a `HorseDriver`: `PlayerDriver` (keyboard or stick, with Shift and Space kept until the physics step uses them) or `BotDriver` (follows waypoints, boosts now and then, jumps the hurdles with a little timing error, keeps to the gap in the narrow passes).
   - `HorseStamina` (boost, cooldown, strain, exhaustion) and `HorsePhysics` (crowding, following, wall hits): no Unity in them, so they are unit tested. `Hurdle`: the bar across a narrow pass; it checks the front of each horse crossing and never blocks the way.
-  - `RacePacing` with `RaceController.PacingAssist`: for races against computer riders only, the others find a few per cent more speed while the player leads and the leader eases a little while the player trails, changing slowly so it is not noticed. **It must be switched off (`PacingAssist = false`) for any race against other people.**
+  - `RacePacing` with `RaceController.PacingAssist`: for races against computer riders only. A rider behind the player gains up to 12% speed, but only until it is about 6 m behind, so it hovers on the player's tail and passes only if the player slips. A rider ahead of the player eases by up to 18% in proportion to its lead, so a player who rides well from behind can win. Changes are gradual so they are not noticed. **It must be switched off (`PacingAssist = false`) for any race against other people.**
+  - `BotDriver` also overtakes (moves out to the side with more room when a slower horse is ahead), boosts every time the horse is rested and takes the hurdles with a per-rider timing error.
   - `Checkpoint`, `Racer`, `RaceCamera`, `RaceHud` (all screens, plain uGUI), `HippodromeRecords` (what is saved), `AssetIdTag` (stable ids like `horses/basic` for future models).
-- **Tests:** `Assets/Tests/EditMode` covers the race rules, the records file, stamina, crowding and pacing; `Assets/Tests/PlayMode` rides a full race with every horse on autopilot and checks on the real track that horses cannot ride through each other, walls and bars slow them, a jump clears a bar and a boost is faster. Run them from Window > General > Test Runner, or with `Unity.exe -batchmode -runTests -testPlatform EditMode` (or `PlayMode`).
+- **Tests:** `Assets/Tests/EditMode` covers the race rules, the records file, stamina, crowding and pacing; `Assets/Tests/PlayMode` rides a full race with every horse on autopilot and checks on the real track that horses cannot ride through each other, walls and bars slow them, a jump clears a bar and a boost is faster. `BalanceTests` (explicit, a few minutes) plays whole races with a good, an average and a sloppy stand-in player and writes `Builds/balance.txt`: the good one wins by well under a second with the bots on its tail, the average one loses narrowly, the sloppy one clearly. Use it when tuning difficulty. Run them from Window > General > Test Runner, or with `Unity.exe -batchmode -runTests -testPlatform EditMode` (or `PlayMode`).
 - **Save file:** `<persistent data path>/hippodrome/default.json` (on Windows `%USERPROFILE%\AppData\LocalLow\Temnorid\Temnorid Hippodrome\hippodrome\default.json`).
 - **Do not add:** networking, Firebase, accounts, or any link to Lords in this version.
 
@@ -100,7 +102,7 @@ Release steps:
 
 1. Build the Windows player from Unity (File > Build Profiles > Windows).
 2. Wrap the build in a Windows installer named `Temnorid-Hippodrome-Setup.exe`.
-3. Create a GitHub Release (tag `v<version>`, for example `v0.2.0`) and attach that file and the zip.
+3. Create a GitHub Release (tag `v<version>`, for example `v0.3.0`) and attach that file and the zip.
 4. Open the website, click the button, install, play, save, restart, uninstall.
 
 When you change the game's description, controls or rules, update this README and `docs/index.html` together.

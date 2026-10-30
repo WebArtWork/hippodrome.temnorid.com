@@ -16,6 +16,12 @@ namespace Temnorid.Hippodrome
 		public float Lookahead = 12f;
 		/// <summary>How far off, in metres, this rider may misjudge where to take off for a jump. A weak rider sometimes hits the bar.</summary>
 		public float JumpTimingError;
+		/// <summary>Whether this rider uses the boost key. A good rider uses it every time the horse is rested.</summary>
+		public bool UseBoost = true;
+		/// <summary>Seconds this rider waits between bursts. The horse itself allows one every 3.5 s.</summary>
+		public float BoostEvery = 3.9f;
+		/// <summary>Whether this rider goes round a slower horse in front of it instead of queueing behind it.</summary>
+		public bool Overtakes = true;
 
 		Transform[] _waypoints;
 		int _target;
@@ -24,6 +30,9 @@ namespace Temnorid.Hippodrome
 		float _nextBoost;
 		float _lastJump = -10f;
 		float _jumpError;
+		float _lane;
+		float _passLane;
+		float _passUntil;
 		HorseController _horse;
 
 		public void SetPath(Transform[] waypoints)
@@ -41,7 +50,9 @@ namespace Temnorid.Hippodrome
 		{
 			if (_waypoints != null) _target = NearestAhead();
 			_stuckTime = 0f;
-			_nextBoost = Time.time + Random.Range(5f, 9f);
+			_nextBoost = Time.time + Random.Range(1f, 3f);
+			_lane = LaneOffset;
+			_passUntil = 0f;
 		}
 
 		public override Vector2 Drive()
@@ -49,6 +60,7 @@ namespace Temnorid.Hippodrome
 			if (_waypoints == null || _waypoints.Length < 3) return Vector2.zero;
 
 			var position = transform.position;
+			_lane = Mathf.MoveTowards(_lane, ChooseLane(), 3.5f * Time.fixedDeltaTime);
 			Vector3 toTarget = Vector3.zero;
 			for (var guard = 0; guard < 4; guard++)
 			{
@@ -70,13 +82,46 @@ namespace Temnorid.Hippodrome
 			return new Vector2(steer, throttle);
 		}
 
-		/// <summary>A rested rider in a straight line asks for a burst now and then.</summary>
+		/// <summary>A rested rider asks for a burst whenever the horse is ready, not in the middle of a sharp turn.</summary>
 		public override bool ConsumeBoost()
 		{
-			if (_horse == null || Time.time < _nextBoost) return false;
-			if (!_horse.Stamina.Ready || _horse.Stamina.Value < 0.6f || Mathf.Abs(_steer) > 0.25f) return false;
-			_nextBoost = Time.time + Random.Range(5f, 9f);
+			if (!UseBoost || _horse == null || Time.time < _nextBoost) return false;
+			if (!_horse.Stamina.Ready || _horse.Stamina.Value < 0.5f || Mathf.Abs(_steer) > 0.35f) return false;
+			_nextBoost = Time.time + Random.Range(BoostEvery, BoostEvery * 1.25f);
 			return true;
+		}
+
+		/// <summary>
+		/// The lane to ride in: its own, unless a slower horse is in the way ahead, in which case it moves
+		/// out to the side with more room for a moment and goes round.
+		/// </summary>
+		float ChooseLane()
+		{
+			if (!Overtakes || _horse == null || Time.time < _passUntil) return Time.time < _passUntil ? _passLane : LaneOffset;
+
+			var forward = transform.forward;
+			var right = Vector3.Cross(Vector3.up, forward);
+			foreach (var other in HorseController.All)
+			{
+				if (other == _horse || other.Locked) continue;
+				var offset = other.transform.position - transform.position;
+				offset.y = 0f;
+				var ahead = Vector3.Dot(offset, forward);
+				var side = Vector3.Dot(offset, right);
+				if (ahead < 0.5f || ahead > 18f || Mathf.Abs(side) > 1.7f || other.Speed > _horse.Speed + 1.5f) continue;
+
+				// Its lane is about ours plus the sideways offset. Go round on the side with more track.
+				var theirs = _lane + side;
+				var left = theirs - 2.6f;
+				var rightLane = theirs + 2.6f;
+				var canLeft = left >= -4.8f;
+				var canRight = rightLane <= 4.8f;
+				if (!canLeft && !canRight) return LaneOffset;
+				_passLane = canLeft && (!canRight || Mathf.Abs(left - _lane) <= Mathf.Abs(rightLane - _lane)) ? left : rightLane;
+				_passUntil = Time.time + 2.2f;
+				return _passLane;
+			}
+			return LaneOffset;
 		}
 
 		/// <summary>Takes off so that the front of the horse is high over the bar when it gets there.</summary>
@@ -107,7 +152,7 @@ namespace Temnorid.Hippodrome
 			var tangent = _waypoints[(index + 1) % count].position - _waypoints[(index - 1 + count) % count].position;
 			tangent.y = 0f;
 			var right = Vector3.Cross(Vector3.up, tangent.normalized);
-			var point = _waypoints[index].position + right * LaneOffset;
+			var point = _waypoints[index].position + right * _lane;
 
 			// Where the track is narrowed to a gap, keep to the middle of it.
 			foreach (var hurdle in Hurdle.All)

@@ -147,31 +147,32 @@ namespace Temnorid.Hippodrome.Tests
 		// ---- pacing ----
 
 		[Test]
-		public void The_player_in_front_makes_the_others_a_little_faster_never_more_than_a_few_per_cent()
+		public void A_rider_behind_the_player_chases_but_only_up_to_a_short_distance_behind()
 		{
-			Assert.AreEqual(1f, RacePacing.Target(true, 0f, false), 0.0001f);
-			var far = RacePacing.Target(true, 500f, false);
-			Assert.Greater(far, 1f);
-			Assert.LessOrEqual(far, 1f + RacePacing.MaxChange + 0.0001f);
-			Assert.Greater(RacePacing.Target(true, 40f, false), RacePacing.Target(true, 10f, false));
+			Assert.AreEqual(1f, RacePacing.Target(0f), 0.0001f);
+			Assert.AreEqual(1f, RacePacing.Target(RacePacing.HoverGap), 0.0001f, "close behind: no reason to push harder");
+			var far = RacePacing.Target(500f);
+			Assert.Greater(far, 1.1f);
+			Assert.LessOrEqual(far, 1f + RacePacing.MaxChase + 0.0001f);
+			Assert.Greater(RacePacing.Target(25f), RacePacing.Target(12f), "the further behind, the harder the chase");
 		}
 
 		[Test]
-		public void The_player_behind_slows_only_the_leader_a_little()
+		public void A_rider_ahead_of_the_player_eases_in_proportion_to_its_lead_never_beyond_the_limit()
 		{
-			Assert.Less(RacePacing.Target(false, -30f, true), 1f);
-			Assert.GreaterOrEqual(RacePacing.Target(false, -500f, true), 1f - RacePacing.MaxChange - 0.0001f);
-			Assert.AreEqual(1f, RacePacing.Target(false, -30f, false), 0.0001f, "the others ride as they are");
+			Assert.Less(RacePacing.Target(-10f), 1f);
+			Assert.Less(RacePacing.Target(-25f), RacePacing.Target(-10f));
+			Assert.GreaterOrEqual(RacePacing.Target(-500f), 1f - RacePacing.MaxEase - 0.0001f);
 		}
 
 		[Test]
 		public void The_pace_changes_slowly()
 		{
 			var scale = 1f;
-			for (var t = 0f; t < 1f; t += 0.02f) scale = RacePacing.Step(scale, 1.06f, 0.02f);
-			Assert.Less(scale, 1.03f, "one second moves it by a fraction of a per cent");
-			for (var t = 0f; t < 10f; t += 0.02f) scale = RacePacing.Step(scale, 1.06f, 0.02f);
-			Assert.AreEqual(1.06f, scale, 0.0001f);
+			for (var t = 0f; t < 1f; t += 0.02f) scale = RacePacing.Step(scale, 1.12f, 0.02f);
+			Assert.Less(scale, 1.06f, "one second moves it by only a few per cent");
+			for (var t = 0f; t < 10f; t += 0.02f) scale = RacePacing.Step(scale, 1.12f, 0.02f);
+			Assert.AreEqual(1.12f, scale, 0.0001f);
 		}
 	}
 }

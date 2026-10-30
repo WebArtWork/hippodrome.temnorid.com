@@ -4,7 +4,7 @@
 ; The installer is written to Builds\Installer.
 
 #define AppName "Temnorid Hippodrome"
-#define AppVersion "0.2.0"
+#define AppVersion "0.3.0"
 #define AppExe "TemnoridHippodrome.exe"
 
 [Setup]
