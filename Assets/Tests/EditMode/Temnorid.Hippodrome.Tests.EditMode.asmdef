@@ -1,0 +1,18 @@
+{
+  "name": "Temnorid.Hippodrome.Tests.EditMode",
+  "rootNamespace": "Temnorid.Hippodrome.Tests",
+  "references": [
+    "Temnorid.Hippodrome",
+    "UnityEngine.TestRunner",
+    "UnityEditor.TestRunner"
+  ],
+  "includePlatforms": ["Editor"],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": ["nunit.framework.dll"],
+  "autoReferenced": false,
+  "defineConstraints": ["UNITY_INCLUDE_TESTS"],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

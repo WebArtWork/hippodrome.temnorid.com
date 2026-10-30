@@ -1,0 +1,24 @@
+{
+  "name": "Temnorid.Hippodrome",
+  "rootNamespace": "Temnorid.Hippodrome",
+  "references": [
+    "ITKamianets.Engine.Core",
+    "ITKamianets.Engine.Input",
+    "ITKamianets.Engine.Save",
+    "Unity.InputSystem",
+    "UnityEngine.UI",
+    "ITKamianets.Engine.UI",
+    "ITKamianets.Engine.Graybox"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "Newtonsoft.Json.dll"
+  ],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
