@@ -5,7 +5,8 @@
     "Temnorid.Hippodrome",
     "UnityEngine.TestRunner",
     "UnityEditor.TestRunner",
-    "ITKamianets.Engine.Net"
+    "ITKamianets.Engine.Net",
+    "ITKamianets.Engine.Shell"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

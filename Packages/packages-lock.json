@@ -1,5 +1,15 @@
 {
   "dependencies": {
+    "com.itkamianets.3d-unity-account": {
+      "version": "https://github.com/IT-Kamianets/3d-unity-account.git",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {
+        "com.unity.modules.unitywebrequest": "1.0.0",
+        "com.unity.modules.jsonserialize": "1.0.0"
+      },
+      "hash": "eebaadbbfaf1fb15c80ec122fc7bbb724c9b2248"
+    },
     "com.itkamianets.3d-unity-core": {
       "version": "https://github.com/IT-Kamianets/3d-unity-core.git",
       "depth": 0,
@@ -53,7 +63,7 @@
         "com.unity.ugui": "2.6.0",
         "com.unity.inputsystem": "1.20.0"
       },
-      "hash": "a6cdbbd023287014769de7080f08cd6da6400fda"
+      "hash": "ec2cc6b71c723f6e8b5f8cf68bfe84245392bb16"
     },
     "com.itkamianets.3d-unity-ui": {
       "version": "https://github.com/IT-Kamianets/3d-unity-ui.git",
