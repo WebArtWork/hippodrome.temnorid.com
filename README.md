@@ -4,7 +4,7 @@
 
 Breeding, training and racing horses. A [Temnorid](https://temnorid.com) game for **Windows**, built on the [IT Kamianets 3D Engine](https://3d.itkamianets.com) with Unity 6000.6.
 
-**Status:** version 0.3.0, playable. Website: https://hippodrome.temnorid.com · Download: [Temnorid-Hippodrome-Setup.exe](https://github.com/WebArtWork/hippodrome.temnorid.com/releases/latest/download/Temnorid-Hippodrome-Setup.exe)
+**Status:** version 0.4.0, playable, with multiplayer. Website: https://hippodrome.temnorid.com · Download: [Temnorid-Hippodrome-Setup.exe](https://github.com/WebArtWork/hippodrome.temnorid.com/releases/latest/download/Temnorid-Hippodrome-Setup.exe)
 
 ## What it is
 
@@ -35,6 +35,14 @@ The first playable is the race itself: you on a horse against computer riders, t
 | Shift | Burst of speed (needs a short rest between uses) |
 | Space | Jump |
 | Esc | Pause menu |
+
+### Playing with others
+
+Up to four people can ride the same race. On the first screen choose **Play with others**, then either **Host a game here** (friends on the same network type the address it shows) or **Host online** (friends type a short code; needs the game linked to Unity Cloud, see below). Everybody presses **Ready** and the host starts. Each person rides their own horse, the computer riders fill the empty places, and the catch-up help the computer riders give in a single-player race is switched off.
+
+### Updates
+
+When a newer release is published on GitHub, the Windows game downloads and installs it by itself the next time it starts, and starts again. Turn it off in **Profile** if you prefer. On Android and iOS the update comes from the store or the release page.
 
 ### Riding
 
@@ -102,7 +110,7 @@ Release steps:
 
 1. Build the Windows player from Unity (File > Build Profiles > Windows).
 2. Wrap the build in a Windows installer named `Temnorid-Hippodrome-Setup.exe`.
-3. Create a GitHub Release (tag `v<version>`, for example `v0.3.0`) and attach that file and the zip.
+3. Create a GitHub Release (tag `v<version>`, for example `v0.4.0`; installed games update to it by themselves) and attach that file and the zip.
 4. Open the website, click the button, install, play, save, restart, uninstall.
 
 When you change the game's description, controls or rules, update this README and `docs/index.html` together.

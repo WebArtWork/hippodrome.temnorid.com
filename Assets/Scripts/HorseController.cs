@@ -65,6 +65,12 @@ namespace Temnorid.Hippodrome
 		public float Height { get; private set; }
 		public bool Airborne { get; private set; }
 
+		/// <summary>
+		/// True for a horse that another machine rides or simulates: it is shown where that machine says it is and does not run its
+		/// own physics, but other horses still feel it (it has a <see cref="Speed"/> and takes part in <see cref="All"/>).
+		/// </summary>
+		public bool Remote { get; private set; }
+
 		/// <summary>Bars cleared and bars hit with a jump, walls hit and jumps made, this race.</summary>
 		public int BarsCleared { get; private set; }
 		public int BarsHit { get; private set; }
@@ -103,8 +109,26 @@ namespace Temnorid.Hippodrome
 			All.Remove(this);
 		}
 
+		/// <summary>Switches between a horse that runs here and one that is only shown here.</summary>
+		public void SetRemote(bool remote)
+		{
+			Remote = remote;
+			if (_body == null) _body = GetComponent<Rigidbody>();
+			_body.isKinematic = remote;
+			if (!remote) _body.linearVelocity = Vector3.zero;
+		}
+
+		/// <summary>What the machine that owns a remote horse reports about it.</summary>
+		public void ShowRemote(float speed, bool airborne, float height)
+		{
+			Speed = speed;
+			Airborne = airborne;
+			Height = height;
+		}
+
 		void FixedUpdate()
 		{
+			if (Remote) return;
 			var dt = Time.fixedDeltaTime;
 
 			if (Locked)

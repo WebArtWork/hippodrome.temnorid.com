@@ -18,6 +18,14 @@ namespace Temnorid.Hippodrome.EditorTools
 		const string PlayerFolder = "Builds/Windows/TemnoridHippodrome";
 		const string ExeName = "TemnoridHippodrome.exe";
 
+		/// <summary>Android package for sideloading: <c>Builds/Android/TemnoridHippodrome.apk</c>. Run with <c>-buildTarget Android</c>.</summary>
+		[MenuItem("Temnorid/Hippodrome/Build Android Package")]
+		public static void BuildAndroid()
+		{
+			if (!ITKamianets.Engine.Shell.Editor.ShellSceneKit.BuildAndroid("Builds/Android/TemnoridHippodrome.apk"))
+				throw new Exception("Android build failed.");
+		}
+
 		[MenuItem("Temnorid/Hippodrome/Build Windows Player")]
 		public static void BuildWindows()
 		{
@@ -28,7 +36,8 @@ namespace Temnorid.Hippodrome.EditorTools
 
 			var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
 			{
-				scenes = new[] { ScenePath },
+				// Boot, Menu and the game: the scenes the scene builder put in the build settings.
+				scenes = Array.ConvertAll(Array.FindAll(EditorBuildSettings.scenes, s => s.enabled), s => s.path),
 				locationPathName = PlayerFolder + "/" + ExeName,
 				target = BuildTarget.StandaloneWindows64,
 				options = BuildOptions.None,

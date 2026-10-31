@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using ITKamianets.Engine.Net;
 using ITKamianets.Engine.Core;
 using ITKamianets.Engine.Input;
 using UnityEngine;
@@ -112,6 +113,30 @@ namespace Temnorid.Hippodrome
 
 			BuildPathLengths();
 			PrepareGrid();
+
+			// Against other people: the race is shared, and the catch-up pacing must not be there.
+			if (NetSession.Instance.IsOnline)
+			{
+				PacingAssist = false;
+				Net = gameObject.AddComponent<RaceNet>();
+				Net.Init(this);
+				PrepareGrid();
+			}
+		}
+
+		/// <summary>The link to other players when this race is online, otherwise null.</summary>
+		public RaceNet Net { get; private set; }
+
+		/// <summary>
+		/// Starts the race for everybody: alone it just starts, as the host it also tells the others, and a guest does nothing
+		/// because only the host decides when the race starts.
+		/// </summary>
+		public void RequestStart()
+		{
+			if (Net == null) { StartRace(); return; }
+			if (!NetSession.Instance.IsHost) return;
+			Net.AnnounceStart();
+			StartRace();
 		}
 
 		void FixedUpdate()
@@ -211,7 +236,7 @@ namespace Temnorid.Hippodrome
 			for (var i = 0; i < Racers.Length; i++)
 			{
 				var racer = Racers[i];
-				var slot = GridSlots[i % GridSlots.Length];
+				var slot = GridSlots[(Net != null ? Net.SlotOf(i) : i) % GridSlots.Length];
 				racer.Horse.Locked = true;
 				racer.Horse.ResetRace();
 				racer.Horse.Teleport(slot.position, slot.rotation);
@@ -225,6 +250,7 @@ namespace Temnorid.Hippodrome
 
 		HorseDriver DriverFor(Racer racer)
 		{
+			if (racer.Horse.Remote) return null;
 			if (racer.IsPlayer && !PlayerAutopilot) return racer.PlayerDriver;
 			return racer.BotDriver;
 		}

@@ -1,4 +1,5 @@
 using ITKamianets.Engine.Input;
+using ITKamianets.Engine.Shell;
 using UnityEngine;
 
 namespace Temnorid.Hippodrome
@@ -12,9 +13,15 @@ namespace Temnorid.Hippodrome
 		bool _boost;
 		bool _jump;
 
+		/// <summary>On-screen buttons on a phone or tablet. Null elsewhere. Steering is by two buttons; the horse gallops unless Brake is held.</summary>
+		public TouchButton SteerLeft, SteerRight, Brake, Boost, Jump;
+
 		public override Vector2 Drive()
 		{
-			return EngineInput.Default.Player.Move.ReadValue<Vector2>();
+			var move = EngineInput.Default.Player.Move.ReadValue<Vector2>();
+			if (SteerLeft == null) return move;
+			var steer = (SteerRight.Held ? 1f : 0f) - (SteerLeft.Held ? 1f : 0f);
+			return new Vector2(Mathf.Abs(steer) > 0f ? steer : move.x, Brake.Held ? -1f : Mathf.Max(move.y, 1f));
 		}
 
 		// A key press lasts one frame and the horse reads input once per physics step, so a press is kept until it is used.
@@ -24,6 +31,8 @@ namespace Temnorid.Hippodrome
 			var player = EngineInput.Default.Player;
 			if (player.Sprint.WasPressedThisFrame()) _boost = true;
 			if (player.Jump.WasPressedThisFrame()) _jump = true;
+			if (Boost != null && Boost.ConsumePress()) _boost = true;
+			if (Jump != null && Jump.ConsumePress()) _jump = true;
 		}
 
 		void OnEnable()

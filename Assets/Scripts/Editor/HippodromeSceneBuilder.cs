@@ -1,6 +1,7 @@
 using ITKamianets.Engine.Graybox;
 using ITKamianets.Engine.Graybox.EditorTools;
 using System.Collections.Generic;
+using ITKamianets.Engine.Shell.Editor;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.SceneManagement;
@@ -57,16 +58,16 @@ namespace Temnorid.Hippodrome.EditorTools
 			hud.Race = race;
 
 			EditorSceneManager.SaveScene(scene, ScenePath);
-			EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
+			ShellSceneKit.BuildBoot();
+			ShellSceneKit.BuildMenu();
+			ShellSceneKit.SetBuildOrder(ScenePath);
 			AssetDatabase.SaveAssets();
 			Debug.Log("[Hippodrome] Scene built: " + ScenePath);
 		}
 
 		static void SetupProject()
 		{
-			PlayerSettings.productName = "Temnorid Hippodrome";
-			PlayerSettings.companyName = "Temnorid";
-			PlayerSettings.bundleVersion = "0.3.0";
+			ShellSceneKit.ApplyPlatformSettings("Temnorid", "Temnorid Hippodrome", "com.itkamianets.hippodrome", "0.4.0");
 			PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Standalone, "com.itkamianets.hippodrome");
 			PlayerSettings.runInBackground = true;
 			PlayerSettings.fullScreenMode = FullScreenMode.FullScreenWindow;
