@@ -19,14 +19,12 @@ namespace Temnorid.Hippodrome
 				Repo = Repo,
 				InstallerSuffix = "-Setup.exe",
 				MaxPlayers = 4,
-				Multiplayer = true,
+				// One player, straight into the village and its ring track after signing in: no landing screen, no lobby, no Profile for now.
+				Multiplayer = false,
+				Profile = false,
+				SkipLanding = true,
 				GameScene = "Main",
 				Accent = new Color(0.84f, 0.63f, 0.23f),
-				Places =
-				{
-					new ShellPlace("race", "Race", "R"),
-					new ShellPlace("records", "Records", "T"),
-				},
 			};
 		}
 	}

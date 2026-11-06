@@ -89,15 +89,11 @@ namespace Temnorid.Hippodrome
 			_store = new RecordsStore();
 			Records = _store.Load();
 
-			foreach (var checkpoint in Checkpoints) checkpoint.Race = this;
-
-			var path = Waypoints;
 			for (var i = 0; i < Racers.Length; i++)
 			{
 				var racer = Racers[i];
 				racer.Index = i;
 				racer.Horse.Locked = true;
-				if (racer.BotDriver != null) racer.BotDriver.SetPath(path);
 			}
 
 			// Horses race each other, they do not bump each other off the track.
@@ -111,11 +107,26 @@ namespace Temnorid.Hippodrome
 				}
 			}
 
+			// A scene with its track made ahead of time starts at once; one whose track is made when the game starts (around the village) calls InitTrack.
+			if (Waypoints != null && Waypoints.Length > 0 && Checkpoints != null && Checkpoints.Length > 0 && GridSlots != null && GridSlots.Length > 0)
+				InitTrack(Waypoints, Checkpoints, GridSlots);
+		}
+
+		/// <summary>Gives the race its track: the path the riders follow, the gates across it, and where they stand to start.</summary>
+		public void InitTrack(Transform[] waypoints, Checkpoint[] checkpoints, Transform[] gridSlots)
+		{
+			Waypoints = waypoints;
+			Checkpoints = checkpoints;
+			GridSlots = gridSlots;
+			foreach (var checkpoint in Checkpoints) checkpoint.Race = this;
+			foreach (var racer in Racers)
+				if (racer.BotDriver != null) racer.BotDriver.SetPath(Waypoints);
+
 			BuildPathLengths();
 			PrepareGrid();
 
 			// Against other people: the race is shared, and the catch-up pacing must not be there.
-			if (NetSession.Instance.IsOnline)
+			if (NetSession.Instance.IsOnline && Net == null)
 			{
 				PacingAssist = false;
 				Net = gameObject.AddComponent<RaceNet>();

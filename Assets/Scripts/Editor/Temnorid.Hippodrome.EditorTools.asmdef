@@ -3,6 +3,7 @@
   "rootNamespace": "Temnorid.Hippodrome.EditorTools",
   "references": [
     "Temnorid.Hippodrome",
+    "Temnorid.Village",
     "ITKamianets.Engine.Graybox",
     "ITKamianets.Engine.Graybox.Editor",
     "ITKamianets.Engine.Shell",

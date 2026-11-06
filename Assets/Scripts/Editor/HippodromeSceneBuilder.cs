@@ -17,7 +17,10 @@ namespace Temnorid.Hippodrome.EditorTools
 	/// </summary>
 	public static class HippodromeSceneBuilder
 	{
-		const string ScenePath = "Assets/Scenes/Main.unity";
+		/// <summary>The village with the ring round its walls: where the game opens.</summary>
+		const string VillagePath = "Assets/Scenes/Main.unity";
+		/// <summary>The stadium with the other riders: reached by riding out of the ring.</summary>
+		const string RacePath = "Assets/Scenes/Race.unity";
 		const string MaterialDir = "Assets/Materials";
 
 		// The track is a stadium: two straights joined by two half circles, ridden counter-clockwise from above.
@@ -31,7 +34,18 @@ namespace Temnorid.Hippodrome.EditorTools
 		public static void Build()
 		{
 			SetupProject();
+			BuildRaceScene();
+			BuildVillageScene();
 
+			ShellSceneKit.BuildBoot();
+			ShellSceneKit.BuildMenu();
+			ShellSceneKit.SetBuildOrder(VillagePath, RacePath);
+			AssetDatabase.SaveAssets();
+			Debug.Log("[Hippodrome] Scenes built: " + VillagePath + ", " + RacePath);
+		}
+
+		static void BuildRaceScene()
+		{
 			var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 			RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
 			RenderSettings.ambientLight = new Color(0.62f, 0.66f, 0.74f);
@@ -56,13 +70,52 @@ namespace Temnorid.Hippodrome.EditorTools
 			race.Laps = 3;
 			var hud = game.AddComponent<RaceHud>();
 			hud.Race = race;
+			hud.Title = "Races";
 
-			EditorSceneManager.SaveScene(scene, ScenePath);
-			ShellSceneKit.BuildBoot();
-			ShellSceneKit.BuildMenu();
-			ShellSceneKit.SetBuildOrder(ScenePath);
-			AssetDatabase.SaveAssets();
-			Debug.Log("[Hippodrome] Scene built: " + ScenePath);
+			EditorSceneManager.SaveScene(scene, RacePath);
+		}
+
+		/// <summary>The village scene: the village itself is drawn when the game starts, and the ring round it is built then too (it follows the village's size).</summary>
+		static void BuildVillageScene()
+		{
+			var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+			RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+			RenderSettings.ambientLight = new Color(0.62f, 0.66f, 0.74f);
+
+			var slide = SlideMaterial();
+			var world = new GameObject("World").transform;
+			Prim(PrimitiveType.Cube, "SafetyGround", world, new Vector3(0f, -0.6f, 0f), new Vector3(900f, 1f, 900f), Mat("Grass", new Color(0.30f, 0.52f, 0.26f)));
+
+			var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+			var lit = Mat("VillageLit", Color.white);
+			var text = GrayboxBuilder.WorldTextMaterial(font, MaterialDir);
+			var view = new GameObject("Village").AddComponent<Temnorid.Village.VillageView>();
+			view.LitTemplate = lit;
+			view.TextMaterial = text;
+
+			// One horse, parked out of the way until the ring is ready.
+			var park = new GameObject("Park").transform;
+			park.position = new Vector3(0f, 0.12f, -500f);
+			var racer = Horse(new GameObject("Racers").transform, park, "You", new Color(0.45f, 0.30f, 0.18f), new Color(0.18f, 0.45f, 0.95f), true, 1f, 0f, 1f, slide);
+			var follow = BuildCameraAndLight(racer.transform);
+
+			var game = new GameObject("Game");
+			var race = game.AddComponent<RaceController>();
+			race.Racers = new[] { racer };
+			race.Laps = 9999; // training laps: no end
+			race.CountdownSeconds = 1.5f;
+			race.PacingAssist = false;
+			var hud = game.AddComponent<RaceHud>();
+			hud.Race = race;
+			hud.Title = "Village";
+			var ring = game.AddComponent<HippodromeWorld>();
+			ring.Race = race;
+			ring.View = view;
+			ring.Camera = follow;
+			ring.Lit = lit;
+			ring.TextMaterial = text;
+
+			EditorSceneManager.SaveScene(scene, VillagePath);
 		}
 
 		static void SetupProject()
@@ -367,7 +420,7 @@ namespace Temnorid.Hippodrome.EditorTools
 
 		// ---- camera, light, materials ----
 
-		static void BuildCameraAndLight(Transform target)
+		static RaceCamera BuildCameraAndLight(Transform target)
 		{
 			var cameraObject = new GameObject("Main Camera") { tag = "MainCamera" };
 			var camera = cameraObject.AddComponent<Camera>();
@@ -386,6 +439,7 @@ namespace Temnorid.Hippodrome.EditorTools
 			light.type = LightType.Directional;
 			light.intensity = 1.15f;
 			light.shadows = LightShadows.Soft;
+			return follow;
 		}
 
 		static PhysicsMaterial SlideMaterial()
