@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "1.0.0",
+  "libraryId": "hippodrome-temnorid",
+  "units": "meters",
+  "metadata": {
+    "tags": [
+      "assetra"
+    ],
+    "properties": {
+      "assetra": {
+        "format": 1,
+        "project": "hippodrome-temnorid",
+        "name": "Temnorid Hippodrome",
+        "modelsDir": "Assets/Models"
+      }
+    }
+  },
+  "assets": []
+}
